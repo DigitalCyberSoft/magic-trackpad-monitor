@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Show Magic Trackpad monitoring status
+
+echo "=== Magic Trackpad Status ==="
+echo
+
+# Show monitored device
+if [[ -f /tmp/trackpad-mac-cache ]]; then
+    MAC=$(cat /tmp/trackpad-mac-cache)
+    echo "Monitored Device: $MAC"
+
+    # Get device info
+    if bluetoothctl info "$MAC" &>/dev/null; then
+        NAME=$(bluetoothctl info "$MAC" | grep "Name:" | cut -d: -f2- | xargs)
+        CONNECTED=$(bluetoothctl info "$MAC" | grep "Connected:" | awk '{print $2}')
+        echo "Device Name: $NAME"
+        echo "Currently Connected: $CONNECTED"
+    fi
+else
+    echo "No device cached yet"
+fi
+
+echo
+
+# Show last connected time
+if [[ -f /tmp/trackpad-last-connected ]]; then
+    LAST_CONNECTED=$(cat /tmp/trackpad-last-connected)
+    echo "Last Verified Connected: $LAST_CONNECTED"
+
+    # Calculate time since
+    TIMESTAMP=$(echo "$LAST_CONNECTED" | grep -oP '\(\K[0-9]+(?=\))')
+    if [[ -n "$TIMESTAMP" ]]; then
+        CURRENT=$(date +%s)
+        SECONDS_AGO=$((CURRENT - TIMESTAMP))
+
+        if [[ $SECONDS_AGO -lt 60 ]]; then
+            echo "  (${SECONDS_AGO} seconds ago)"
+        elif [[ $SECONDS_AGO -lt 3600 ]]; then
+            echo "  ($((SECONDS_AGO / 60)) minutes ago)"
+        else
+            echo "  ($((SECONDS_AGO / 3600)) hours ago)"
+        fi
+    fi
+else
+    echo "Last Connected: Unknown"
+fi
+
+echo
+
+# Show service status
+echo "Service Status:"
+systemctl --user is-active trackpad-fast-reconnect.service &>/dev/null
+if [[ $? -eq 0 ]]; then
+    echo "  ✓ Running"
+else
+    echo "  ✗ Not running"
+fi
+
+systemctl --user is-enabled trackpad-fast-reconnect.service &>/dev/null
+if [[ $? -eq 0 ]]; then
+    echo "  ✓ Enabled (starts on boot)"
+else
+    echo "  ✗ Not enabled"
+fi
+
+echo
+echo "Cache expiry: 30 days"
+if [[ -f /tmp/trackpad-mac-cache ]]; then
+    CACHE_AGE_DAYS=$(( ($(date +%s) - $(stat -c %Y /tmp/trackpad-mac-cache)) / 86400 ))
+    echo "Cache age: ${CACHE_AGE_DAYS} days"
+fi
