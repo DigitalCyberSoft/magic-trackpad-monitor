@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           magic-trackpad-monitor
-Version:        @VERSION@
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux
 
@@ -11,20 +11,12 @@ URL:            https://github.com/DigitalCyberSoft/magic-trackpad-monitor
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-%if 0%{?rhel} >= 10
-BuildRequires:  libXss-devel
-%else
-BuildRequires:  libXScrnSaver-devel
-%endif
+BuildRequires:  (libXScrnSaver-devel or libXss-devel)
 BuildRequires:  systemd-rpm-macros
 
 Requires:       bluez
 Requires:       xinput
-%if 0%{?rhel} >= 10
-Requires:       libXss
-%else
-Requires:       libXScrnSaver
-%endif
+Requires:       (libXScrnSaver or libXss)
 Requires:       systemd
 
 %description
@@ -100,7 +92,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 %changelog
-* Wed Nov 19 2025 Builder - @VERSION@-1
+* Wed Nov 19 2025 Builder - 0.2.1-1
 - Initial package release
 - XDG-compliant configuration and data directories
 - Pre-compiled xidle binary included
