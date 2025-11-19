@@ -93,9 +93,11 @@ install_dependencies() {
         fedora|rhel|centos|rocky|almalinux)
             log_info "Installing dependencies with DNF/YUM..."
             if command_exists dnf; then
-                sudo dnf install -y bluez xinput gcc libXScrnSaver-devel
+                sudo dnf install -y bluez xinput gcc
+                sudo dnf install -y libXScrnSaver-devel || sudo dnf install -y libXss-devel
             else
-                sudo yum install -y bluez xinput gcc libXScrnSaver-devel
+                sudo yum install -y bluez xinput gcc
+                sudo yum install -y libXScrnSaver-devel || sudo yum install -y libXss-devel
             fi
             ;;
         ubuntu|debian|pop)
@@ -109,11 +111,12 @@ install_dependencies() {
             ;;
         opensuse*|sles)
             log_info "Installing dependencies with zypper..."
-            sudo zypper install -y bluez xinput gcc libXScrnSaver-devel
+            sudo zypper install -y bluez xinput gcc
+            sudo zypper install -y libXScrnSaver-devel || sudo zypper install -y libXss-devel
             ;;
         *)
             log_error "Unsupported distribution: $DISTRO"
-            log_info "Please manually install: bluez, xinput, gcc, libXScrnSaver-devel"
+            log_info "Please manually install: bluez, xinput, gcc, libXScrnSaver-devel or libXss-devel"
             exit 1
             ;;
     esac

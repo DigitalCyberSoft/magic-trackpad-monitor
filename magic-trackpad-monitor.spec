@@ -11,12 +11,12 @@ URL:            https://github.com/DigitalCyberSoft/magic-trackpad-monitor
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-BuildRequires:  libXScrnSaver-devel
+BuildRequires:  (libXScrnSaver-devel or libXss-devel)
 BuildRequires:  systemd-rpm-macros
 
 Requires:       bluez
 Requires:       xinput
-Requires:       libXScrnSaver
+Requires:       (libXScrnSaver or libXss)
 Requires:       systemd
 
 %description

@@ -54,8 +54,9 @@ PREFIX=/usr/local sudo ./install.sh
 
 ### Option 3: Manual Installation with Make
 ```bash
-# Install dependencies (Fedora)
-sudo dnf install -y gcc libXScrnSaver-devel bluez xinput
+# Install dependencies (Fedora/RHEL - package name varies by version)
+sudo dnf install -y gcc bluez xinput
+sudo dnf install -y libXScrnSaver-devel || sudo dnf install -y libXss-devel
 
 # Or on Ubuntu/Debian
 sudo apt install -y gcc libxss-dev libx11-dev bluez xinput
@@ -315,7 +316,7 @@ make uninstall
 
 ### Build Requirements (Source Only)
 - gcc - C compiler
-- libXScrnSaver-devel / libxss-dev - For compiling xidle
+- libXScrnSaver-devel or libXss-devel (Fedora/RHEL) / libxss-dev (Debian/Ubuntu) - For compiling xidle
 
 ## File Locations
 
