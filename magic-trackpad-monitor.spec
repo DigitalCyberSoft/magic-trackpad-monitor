@@ -7,7 +7,7 @@ Release:        1%{?dist}
 Summary:        Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux
 
 License:        MIT
-URL:            https://github.com/yourusername/linux-magictrackpad-reconnect
+URL:            https://github.com/DigitalCyberSoft/magic-trackpad-monitor
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc

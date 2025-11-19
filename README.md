@@ -25,7 +25,7 @@ Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux 
 #### Fedora/RHEL/CentOS (RPM)
 ```bash
 # From COPR repository (once published)
-sudo dnf copr enable yourusername/magic-trackpad-monitor
+sudo dnf copr enable DigitalCyberSoft/magic-trackpad-monitor
 sudo dnf install magic-trackpad-monitor
 
 # Or install local RPM
@@ -41,7 +41,7 @@ sudo apt install ./magic-trackpad-monitor_*.deb
 ### Option 2: Bash Installer
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/linux-magictrackpad-reconnect.git
+git clone https://github.com/DigitalCyberSoft/magic-trackpad-monitor.git
 cd linux-magictrackpad-reconnect
 
 # Run installer (installs to ~/.local by default)
@@ -71,11 +71,39 @@ systemctl --user start magic-trackpad-monitor.service
 
 ### Post-Installation
 
-After installing via any method, enable and start the service:
+After installing via any method, you have two options to set up the service:
+
+#### Option A: Interactive Setup (Easiest)
+Simply run `trackpad-status` and it will guide you through the setup:
+```bash
+trackpad-status
+```
+
+If the service isn't installed, enabled, or running, `trackpad-status` will detect this and offer to:
+- Install the service for your user
+- Enable it to start on login
+- Start it immediately
+
+#### Option B: Manual Setup
+Manually enable and start the service:
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable magic-trackpad-monitor.service
 systemctl --user start magic-trackpad-monitor.service
+```
+
+### Verifying Installation
+
+Check that everything is working:
+```bash
+# Check service status (interactive helper)
+trackpad-status
+
+# Or check manually
+systemctl --user status magic-trackpad-monitor.service
+
+# View live logs
+journalctl --user -u magic-trackpad-monitor.service -f
 ```
 
 ## Usage
