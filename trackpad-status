@@ -54,18 +54,79 @@ echo
 
 # Show service status
 echo "Service Status:"
-systemctl --user is-active trackpad-fast-reconnect.service &>/dev/null
-if [[ $? -eq 0 ]]; then
-    echo "  ✓ Running"
-else
-    echo "  ✗ Not running"
+
+# Check if service unit exists
+SERVICE_FOUND=false
+if systemctl --user list-unit-files magic-trackpad-monitor.service &>/dev/null | grep -q "magic-trackpad-monitor.service"; then
+    SERVICE_FOUND=true
 fi
 
-systemctl --user is-enabled trackpad-fast-reconnect.service &>/dev/null
-if [[ $? -eq 0 ]]; then
-    echo "  ✓ Enabled (starts on boot)"
+if [ "$SERVICE_FOUND" = false ]; then
+    echo "  ✗ Service not installed"
+    echo
+    echo "The magic-trackpad-monitor.service is not installed."
+    echo
+    echo "To install it:"
+    echo "  1. Copy magic-trackpad-monitor.service to ~/.config/systemd/user/"
+    echo "  2. Run: systemctl --user daemon-reload"
+    echo "  3. Run: systemctl --user enable magic-trackpad-monitor.service"
+    echo "  4. Run: systemctl --user start magic-trackpad-monitor.service"
+    echo
+    read -p "Would you like to install it now? [y/N] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Find the service file
+        SERVICE_FILE=""
+        for path in "/usr/lib/systemd/user/magic-trackpad-monitor.service" \
+                    "/usr/local/share/magic-trackpad-monitor/magic-trackpad-monitor.service" \
+                    "$(dirname "$0")/../share/magic-trackpad-monitor/magic-trackpad-monitor.service" \
+                    "$(dirname "$0")/magic-trackpad-monitor.service"; do
+            if [[ -f "$path" ]]; then
+                SERVICE_FILE="$path"
+                break
+            fi
+        done
+
+        if [[ -n "$SERVICE_FILE" ]]; then
+            mkdir -p ~/.config/systemd/user
+            cp "$SERVICE_FILE" ~/.config/systemd/user/
+            systemctl --user daemon-reload
+            systemctl --user enable magic-trackpad-monitor.service
+            systemctl --user start magic-trackpad-monitor.service
+            echo "Service installed and started successfully!"
+        else
+            echo "Error: Could not find magic-trackpad-monitor.service file"
+            echo "Please install the package or run the installer script"
+        fi
+    fi
 else
-    echo "  ✗ Not enabled"
+    systemctl --user is-active magic-trackpad-monitor.service &>/dev/null
+    if [[ $? -eq 0 ]]; then
+        echo "  ✓ Running"
+    else
+        echo "  ✗ Not running"
+        echo
+        read -p "Would you like to start it now? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            systemctl --user start magic-trackpad-monitor.service
+            echo "Service started successfully!"
+        fi
+    fi
+
+    systemctl --user is-enabled magic-trackpad-monitor.service &>/dev/null
+    if [[ $? -eq 0 ]]; then
+        echo "  ✓ Enabled (starts on boot)"
+    else
+        echo "  ✗ Not enabled"
+        echo
+        read -p "Would you like to enable it? [y/N] " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            systemctl --user enable magic-trackpad-monitor.service
+            echo "Service enabled successfully!"
+        fi
+    fi
 fi
 
 echo

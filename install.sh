@@ -158,7 +158,7 @@ install_files() {
     install -m 644 config.default "$INSTALL_PREFIX/share/$PACKAGE_NAME/config.default"
 
     # Install systemd service
-    install -m 644 trackpad-fast-reconnect.service "$HOME/.config/systemd/user/trackpad-fast-reconnect.service"
+    install -m 644 magic-trackpad-monitor.service "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
 
     log_success "Files installed successfully"
 }
@@ -174,14 +174,14 @@ setup_service() {
     read -p "Enable service to start on login? [Y/n] " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-        systemctl --user enable trackpad-fast-reconnect.service
+        systemctl --user enable magic-trackpad-monitor.service
         log_success "Service enabled"
 
         # Ask if user wants to start service now
         read -p "Start service now? [Y/n] " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-            systemctl --user start trackpad-fast-reconnect.service
+            systemctl --user start magic-trackpad-monitor.service
             log_success "Service started"
         fi
     fi
@@ -192,13 +192,13 @@ uninstall() {
     log_info "Uninstalling Magic Trackpad Monitor..."
 
     # Stop and disable service
-    if systemctl --user is-active trackpad-fast-reconnect.service &>/dev/null; then
-        systemctl --user stop trackpad-fast-reconnect.service
+    if systemctl --user is-active magic-trackpad-monitor.service &>/dev/null; then
+        systemctl --user stop magic-trackpad-monitor.service
         log_info "Service stopped"
     fi
 
-    if systemctl --user is-enabled trackpad-fast-reconnect.service &>/dev/null; then
-        systemctl --user disable trackpad-fast-reconnect.service
+    if systemctl --user is-enabled magic-trackpad-monitor.service &>/dev/null; then
+        systemctl --user disable magic-trackpad-monitor.service
         log_info "Service disabled"
     fi
 
@@ -207,7 +207,7 @@ uninstall() {
     rm -f "$INSTALL_PREFIX/bin/trackpad-status"
     rm -f "$INSTALL_PREFIX/bin/xidle"
     rm -rf "$INSTALL_PREFIX/share/$PACKAGE_NAME"
-    rm -f "$HOME/.config/systemd/user/trackpad-fast-reconnect.service"
+    rm -f "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
 
     systemctl --user daemon-reload
 
@@ -276,12 +276,12 @@ main() {
     echo ""
     log_info "Commands:"
     log_info "  trackpad-status                      - Check trackpad status"
-    log_info "  systemctl --user status trackpad-fast-reconnect.service"
-    log_info "  systemctl --user stop trackpad-fast-reconnect.service"
-    log_info "  systemctl --user restart trackpad-fast-reconnect.service"
+    log_info "  systemctl --user status magic-trackpad-monitor.service"
+    log_info "  systemctl --user stop magic-trackpad-monitor.service"
+    log_info "  systemctl --user restart magic-trackpad-monitor.service"
     echo ""
     log_info "Configuration: ~/.config/trackpad-monitor/config"
-    log_info "Logs: journalctl --user -u trackpad-fast-reconnect.service -f"
+    log_info "Logs: journalctl --user -u magic-trackpad-monitor.service -f"
     echo ""
 
     # Check if ~/.local/bin is in PATH

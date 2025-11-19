@@ -1,4 +1,5 @@
 %global _hardened_build 1
+%global debug_package %{nil}
 
 Name:           magic-trackpad-monitor
 Version:        @VERSION@
@@ -54,7 +55,7 @@ install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
 install -D -m 644 config.default %{buildroot}%{_datadir}/%{name}/config.default
 
 # Install systemd user service
-install -D -m 644 trackpad-fast-reconnect.service %{buildroot}%{_userunitdir}/trackpad-fast-reconnect.service
+install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/magic-trackpad-monitor.service
 
 %files
 %doc README.md
@@ -62,7 +63,7 @@ install -D -m 644 trackpad-fast-reconnect.service %{buildroot}%{_userunitdir}/tr
 %{_bindir}/trackpad-status
 %{_bindir}/xidle
 %{_datadir}/%{name}/config.default
-%{_userunitdir}/trackpad-fast-reconnect.service
+%{_userunitdir}/magic-trackpad-monitor.service
 
 %post
 echo ""
@@ -70,8 +71,8 @@ echo "Magic Trackpad Monitor installed successfully!"
 echo ""
 echo "To enable and start the service:"
 echo "  systemctl --user daemon-reload"
-echo "  systemctl --user enable trackpad-fast-reconnect.service"
-echo "  systemctl --user start trackpad-fast-reconnect.service"
+echo "  systemctl --user enable magic-trackpad-monitor.service"
+echo "  systemctl --user start magic-trackpad-monitor.service"
 echo ""
 echo "Configuration file will be created at: ~/.config/trackpad-monitor/config"
 echo "Check status with: trackpad-status"
@@ -79,8 +80,8 @@ echo ""
 
 %preun
 # Stop service before uninstall
-if systemctl --user is-active trackpad-fast-reconnect.service &>/dev/null; then
-    systemctl --user stop trackpad-fast-reconnect.service
+if systemctl --user is-active magic-trackpad-monitor.service &>/dev/null; then
+    systemctl --user stop magic-trackpad-monitor.service
 fi
 
 %postun

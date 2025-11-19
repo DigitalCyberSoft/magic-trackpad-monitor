@@ -73,7 +73,7 @@ sudo dnf install ./magic-trackpad-monitor-*.rpm
 
 # Test
 trackpad-status
-systemctl --user status trackpad-fast-reconnect.service
+systemctl --user status magic-trackpad-monitor.service
 
 # Uninstall
 sudo dnf remove magic-trackpad-monitor
@@ -86,7 +86,7 @@ sudo apt install ./magic-trackpad-monitor_*.deb
 
 # Test
 trackpad-status
-systemctl --user status trackpad-fast-reconnect.service
+systemctl --user status magic-trackpad-monitor.service
 
 # Uninstall
 sudo apt remove magic-trackpad-monitor
@@ -217,7 +217,7 @@ rpmbuild --target=aarch64 ...
 | trackpad-status | /usr/bin/ | Status checker |
 | xidle | /usr/bin/ | X11 idle detector |
 | config.default | /usr/share/magic-trackpad-monitor/ | Default configuration |
-| trackpad-fast-reconnect.service | /usr/lib/systemd/user/ | Systemd service |
+| magic-trackpad-monitor.service | /usr/lib/systemd/user/ | Systemd service |
 
 ### User-Specific Files (created at runtime)
 

@@ -16,7 +16,7 @@ Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux 
 - **trackpad-monitor** - Main monitoring script
 - **trackpad-status** - Status checker command-line tool
 - **xidle** - X11 idle time detector (lightweight xprintidle alternative)
-- **trackpad-fast-reconnect.service** - systemd user service file
+- **magic-trackpad-monitor.service** - systemd user service file
 
 ## Installation
 
@@ -65,8 +65,8 @@ make install
 
 # Enable and start service
 systemctl --user daemon-reload
-systemctl --user enable trackpad-fast-reconnect.service
-systemctl --user start trackpad-fast-reconnect.service
+systemctl --user enable magic-trackpad-monitor.service
+systemctl --user start magic-trackpad-monitor.service
 ```
 
 ### Post-Installation
@@ -74,8 +74,8 @@ systemctl --user start trackpad-fast-reconnect.service
 After installing via any method, enable and start the service:
 ```bash
 systemctl --user daemon-reload
-systemctl --user enable trackpad-fast-reconnect.service
-systemctl --user start trackpad-fast-reconnect.service
+systemctl --user enable magic-trackpad-monitor.service
+systemctl --user start magic-trackpad-monitor.service
 ```
 
 ## Usage
@@ -94,14 +94,14 @@ Shows:
 
 ### View Logs
 ```bash
-journalctl --user -u trackpad-fast-reconnect.service -f
+journalctl --user -u magic-trackpad-monitor.service -f
 ```
 
 ### Manually Control Service
 ```bash
-systemctl --user status trackpad-fast-reconnect.service
-systemctl --user restart trackpad-fast-reconnect.service
-systemctl --user stop trackpad-fast-reconnect.service
+systemctl --user status magic-trackpad-monitor.service
+systemctl --user restart magic-trackpad-monitor.service
+systemctl --user stop magic-trackpad-monitor.service
 ```
 
 ## How It Works
@@ -138,7 +138,7 @@ CACHE_EXPIRY_DAYS=30
 
 After editing the config, restart the service:
 ```bash
-systemctl --user restart trackpad-fast-reconnect.service
+systemctl --user restart magic-trackpad-monitor.service
 ```
 
 ## Troubleshooting
@@ -146,7 +146,7 @@ systemctl --user restart trackpad-fast-reconnect.service
 ### Service won't start
 Check logs:
 ```bash
-journalctl --user -u trackpad-fast-reconnect.service -n 50
+journalctl --user -u magic-trackpad-monitor.service -n 50
 ```
 
 ### Trackpad not found
@@ -215,7 +215,7 @@ make uninstall
 - **Binaries**: `~/.local/bin/` or `/usr/bin/` or `/usr/local/bin/`
 - **Configuration**: `~/.config/trackpad-monitor/config`
 - **Data/Cache**: `~/.local/share/trackpad-monitor/`
-- **Service**: `~/.config/systemd/user/trackpad-fast-reconnect.service`
+- **Service**: `~/.config/systemd/user/magic-trackpad-monitor.service`
 
 ## License
 

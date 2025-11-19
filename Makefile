@@ -55,13 +55,13 @@ install: build
 	# Install systemd user service (only for non-package installs)
 	@if [ -z "$(DESTDIR)" ]; then \
 		mkdir -p $(SERVICEDIR); \
-		install -D -m 644 trackpad-fast-reconnect.service $(SERVICEDIR)/trackpad-fast-reconnect.service; \
+		install -D -m 644 magic-trackpad-monitor.service $(SERVICEDIR)/magic-trackpad-monitor.service; \
 		echo "Systemd user service installed to $(SERVICEDIR)"; \
 		echo ""; \
 		echo "To enable and start the service:"; \
 		echo "  systemctl --user daemon-reload"; \
-		echo "  systemctl --user enable trackpad-fast-reconnect.service"; \
-		echo "  systemctl --user start trackpad-fast-reconnect.service"; \
+		echo "  systemctl --user enable magic-trackpad-monitor.service"; \
+		echo "  systemctl --user start magic-trackpad-monitor.service"; \
 	fi
 
 	@echo ""
@@ -72,12 +72,12 @@ uninstall:
 	@echo "Uninstalling Magic Trackpad Monitor..."
 
 	# Stop and disable service if running
-	@if systemctl --user is-active trackpad-fast-reconnect.service &>/dev/null; then \
-		systemctl --user stop trackpad-fast-reconnect.service; \
+	@if systemctl --user is-active magic-trackpad-monitor.service &>/dev/null; then \
+		systemctl --user stop magic-trackpad-monitor.service; \
 		echo "Service stopped"; \
 	fi
-	@if systemctl --user is-enabled trackpad-fast-reconnect.service &>/dev/null; then \
-		systemctl --user disable trackpad-fast-reconnect.service; \
+	@if systemctl --user is-enabled magic-trackpad-monitor.service &>/dev/null; then \
+		systemctl --user disable magic-trackpad-monitor.service; \
 		echo "Service disabled"; \
 	fi
 
@@ -86,7 +86,7 @@ uninstall:
 	rm -f $(BINDIR)/trackpad-status
 	rm -f $(BINDIR)/xidle
 	rm -rf $(DATADIR)/$(PACKAGE_NAME)
-	rm -f $(SERVICEDIR)/trackpad-fast-reconnect.service
+	rm -f $(SERVICEDIR)/magic-trackpad-monitor.service
 
 	@echo "Uninstall complete"
 	@echo "User data preserved in: ~/.config/trackpad-monitor/ and ~/.local/share/trackpad-monitor/"
@@ -113,7 +113,7 @@ rpm: build
 	tar czf rpmbuild/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz \
 		--transform 's,^,$(PACKAGE_NAME)-$(VERSION)/,' \
 		trackpad-monitor.sh trackpad-status xidle.c config.default \
-		trackpad-fast-reconnect.service README.md xidle
+		magic-trackpad-monitor.service README.md xidle
 
 	# Generate spec file
 	sed -e 's/@VERSION@/$(VERSION)/g' \
