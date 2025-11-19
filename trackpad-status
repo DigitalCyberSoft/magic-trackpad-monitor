@@ -2,12 +2,16 @@
 
 # Show Magic Trackpad monitoring status
 
+# XDG Base Directory Specification
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+DATA_DIR="$XDG_DATA_HOME/trackpad-monitor"
+
 echo "=== Magic Trackpad Status ==="
 echo
 
 # Show monitored device
-if [[ -f /tmp/trackpad-mac-cache ]]; then
-    MAC=$(cat /tmp/trackpad-mac-cache)
+if [[ -f "$DATA_DIR/device-mac-cache" ]]; then
+    MAC=$(cat "$DATA_DIR/device-mac-cache")
     echo "Monitored Device: $MAC"
 
     # Get device info
@@ -24,8 +28,8 @@ fi
 echo
 
 # Show last connected time
-if [[ -f /tmp/trackpad-last-connected ]]; then
-    LAST_CONNECTED=$(cat /tmp/trackpad-last-connected)
+if [[ -f "$DATA_DIR/last-connected" ]]; then
+    LAST_CONNECTED=$(cat "$DATA_DIR/last-connected")
     echo "Last Verified Connected: $LAST_CONNECTED"
 
     # Calculate time since
@@ -66,7 +70,7 @@ fi
 
 echo
 echo "Cache expiry: 30 days"
-if [[ -f /tmp/trackpad-mac-cache ]]; then
-    CACHE_AGE_DAYS=$(( ($(date +%s) - $(stat -c %Y /tmp/trackpad-mac-cache)) / 86400 ))
+if [[ -f "$DATA_DIR/device-mac-cache" ]]; then
+    CACHE_AGE_DAYS=$(( ($(date +%s) - $(stat -c %Y "$DATA_DIR/device-mac-cache")) / 86400 ))
     echo "Cache age: ${CACHE_AGE_DAYS} days"
 fi

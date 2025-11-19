@@ -1,4 +1,4 @@
-# Linux Magic Trackpad Auto-Reconnect
+# Magic Trackpad Monitor
 
 Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux systems.
 
@@ -8,44 +8,75 @@ Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux 
 - **Smart Idle Detection** - Only monitors when user is active (keyboard idle < 10 minutes)
 - **Stuck Device Recovery** - Detects frozen trackpad and power cycles Bluetooth adapter
 - **Last Connection Tracking** - Tracks when trackpad was last successfully connected
-- **30-Day Device Cache** - Remembers your trackpad for 30 days
+- **XDG-Compliant** - Configuration in `~/.config/trackpad-monitor/`, data in `~/.local/share/trackpad-monitor/`
+- **Easy Packaging** - RPM, DEB, and bash installer support
 
 ## Components
 
-- **trackpad-monitor.sh** - Main monitoring script
+- **trackpad-monitor** - Main monitoring script
 - **trackpad-status** - Status checker command-line tool
-- **xidle.c** - X11 idle time detector (lightweight xprintidle alternative)
+- **xidle** - X11 idle time detector (lightweight xprintidle alternative)
 - **trackpad-fast-reconnect.service** - systemd user service file
 
 ## Installation
 
-1. **Install dependencies:**
-   ```bash
-   sudo dnf install -y libXScrnSaver-devel gcc
-   ```
+### Option 1: Package Manager (Recommended)
 
-2. **Compile xidle:**
-   ```bash
-   gcc -o ~/.local/bin/xidle xidle.c -lX11 -lXss
-   ```
+#### Fedora/RHEL/CentOS (RPM)
+```bash
+# From COPR repository (once published)
+sudo dnf copr enable yourusername/magic-trackpad-monitor
+sudo dnf install magic-trackpad-monitor
 
-3. **Install scripts:**
-   ```bash
-   cp trackpad-monitor.sh ~/
-   chmod +x ~/trackpad-monitor.sh
+# Or install local RPM
+sudo dnf install magic-trackpad-monitor-*.rpm
+```
 
-   cp trackpad-status ~/.local/bin/
-   chmod +x ~/.local/bin/trackpad-status
-   ```
+#### Ubuntu/Debian (DEB)
+```bash
+# Install local DEB package
+sudo apt install ./magic-trackpad-monitor_*.deb
+```
 
-4. **Install systemd service:**
-   ```bash
-   mkdir -p ~/.config/systemd/user
-   cp trackpad-fast-reconnect.service ~/.config/systemd/user/
+### Option 2: Bash Installer
+```bash
+# Clone repository
+git clone https://github.com/yourusername/linux-magictrackpad-reconnect.git
+cd linux-magictrackpad-reconnect
 
-   systemctl --user enable trackpad-fast-reconnect.service
-   systemctl --user start trackpad-fast-reconnect.service
-   ```
+# Run installer (installs to ~/.local by default)
+./install.sh
+
+# Or install system-wide (requires sudo)
+PREFIX=/usr/local sudo ./install.sh
+```
+
+### Option 3: Manual Installation with Make
+```bash
+# Install dependencies (Fedora)
+sudo dnf install -y gcc libXScrnSaver-devel bluez xinput
+
+# Or on Ubuntu/Debian
+sudo apt install -y gcc libxss-dev libx11-dev bluez xinput
+
+# Build and install
+make build
+make install
+
+# Enable and start service
+systemctl --user daemon-reload
+systemctl --user enable trackpad-fast-reconnect.service
+systemctl --user start trackpad-fast-reconnect.service
+```
+
+### Post-Installation
+
+After installing via any method, enable and start the service:
+```bash
+systemctl --user daemon-reload
+systemctl --user enable trackpad-fast-reconnect.service
+systemctl --user start trackpad-fast-reconnect.service
+```
 
 ## Usage
 
@@ -87,12 +118,27 @@ systemctl --user stop trackpad-fast-reconnect.service
 
 ## Configuration
 
-Edit `trackpad-monitor.sh` to customize:
+Configuration file: `~/.config/trackpad-monitor/config`
+
+The configuration file is automatically created with defaults on first run. You can edit it to customize behavior:
 
 ```bash
-CHECK_INTERVAL=10      # seconds between checks
-IDLE_THRESHOLD=600     # 10 minutes in seconds
-CACHE_EXPIRY_DAYS=30   # device cache expiry
+# Time between connection checks (in seconds)
+CHECK_INTERVAL=10
+
+# Idle threshold before pausing monitoring (in seconds)
+IDLE_THRESHOLD=600
+
+# Time without input events to consider trackpad stuck (in seconds)
+STUCK_THRESHOLD=30
+
+# Days before device MAC cache expires
+CACHE_EXPIRY_DAYS=30
+```
+
+After editing the config, restart the service:
+```bash
+systemctl --user restart trackpad-fast-reconnect.service
 ```
 
 ## Troubleshooting
@@ -116,17 +162,69 @@ Test manually:
 ```
 Should return idle time in milliseconds.
 
+## Building Packages
+
+### Build RPM
+```bash
+make rpm
+```
+
+### Build DEB (requires alien)
+```bash
+make deb
+```
+
+### Build for COPR
+```bash
+cd .copr
+make srpm outdir=/path/to/output
+```
+
+## Uninstallation
+
+### Via Package Manager
+```bash
+# Fedora/RHEL
+sudo dnf remove magic-trackpad-monitor
+
+# Ubuntu/Debian
+sudo apt remove magic-trackpad-monitor
+```
+
+### Via Bash Installer
+```bash
+./install.sh --uninstall
+```
+
+### Via Make
+```bash
+make uninstall
+```
+
 ## Requirements
 
 - Linux with systemd
 - X11 (not Wayland)
-- BlueZ 5.x
+- BlueZ 5.x (bluez package)
+- xinput
 - libXScrnSaver
+- gcc (only for building from source)
+
+## File Locations
+
+- **Binaries**: `~/.local/bin/` or `/usr/bin/` or `/usr/local/bin/`
+- **Configuration**: `~/.config/trackpad-monitor/config`
+- **Data/Cache**: `~/.local/share/trackpad-monitor/`
+- **Service**: `~/.config/systemd/user/trackpad-fast-reconnect.service`
 
 ## License
 
-Public Domain
+MIT License
 
 ## Credits
 
 Created to solve the common Magic Trackpad freezing issue on Linux systems.
+
+## Contributing
+
+Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.

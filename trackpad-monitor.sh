@@ -1,12 +1,73 @@
 #!/bin/bash
 
 # Magic Trackpad monitoring and auto-reconnect script
+
+# XDG Base Directory Specification
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+
+# Configuration and data directories
+CONFIG_DIR="$XDG_CONFIG_HOME/trackpad-monitor"
+DATA_DIR="$XDG_DATA_HOME/trackpad-monitor"
+CONFIG_FILE="$CONFIG_DIR/config"
+
+# Create directories if they don't exist
+mkdir -p "$CONFIG_DIR" "$DATA_DIR"
+
+# Default values
 CHECK_INTERVAL=10  # seconds between checks
 IDLE_THRESHOLD=600  # 10 minutes in seconds
 STUCK_THRESHOLD=30  # seconds without events to consider trackpad stuck
-LAST_CONNECTED_FILE="/tmp/trackpad-last-connected"
-DEVICE_CACHE_FILE="/tmp/trackpad-mac-cache"
 CACHE_EXPIRY_DAYS=30  # Only track trackpads connected in last 30 days
+
+# Load configuration file if it exists
+if [[ -f "$CONFIG_FILE" ]]; then
+    # Source config file, filtering out comments and empty lines
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        # Remove any trailing comments
+        value="${value%%#*}"
+        # Trim whitespace
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+        # Set the variable
+        case "$key" in
+            CHECK_INTERVAL) CHECK_INTERVAL="$value" ;;
+            IDLE_THRESHOLD) IDLE_THRESHOLD="$value" ;;
+            STUCK_THRESHOLD) STUCK_THRESHOLD="$value" ;;
+            CACHE_EXPIRY_DAYS) CACHE_EXPIRY_DAYS="$value" ;;
+        esac
+    done < <(grep -v '^[[:space:]]*$' "$CONFIG_FILE")
+else
+    # Create default config file if it doesn't exist
+    cat > "$CONFIG_FILE" << 'EOF'
+# Magic Trackpad Monitor Configuration
+# This file configures the trackpad monitoring service
+
+# Time between connection checks (in seconds)
+# Default: 10 seconds
+CHECK_INTERVAL=10
+
+# Idle threshold before pausing monitoring (in seconds)
+# The monitor will pause when keyboard is idle for this duration
+# Default: 600 seconds (10 minutes)
+IDLE_THRESHOLD=600
+
+# Time without input events to consider trackpad stuck (in seconds)
+# Default: 30 seconds
+STUCK_THRESHOLD=30
+
+# Days before device MAC cache expires
+# Default: 30 days
+CACHE_EXPIRY_DAYS=30
+EOF
+fi
+
+# Data files in XDG data directory
+LAST_CONNECTED_FILE="$DATA_DIR/last-connected"
+DEVICE_CACHE_FILE="$DATA_DIR/device-mac-cache"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -53,7 +114,22 @@ log "Monitoring Magic Trackpad: $TRACKPAD_MAC"
 # Get keyboard/mouse idle time in seconds using xidle (X11 idle time detector)
 get_keyboard_idle_time() {
     local idle_ms
-    idle_ms=$($HOME/.local/bin/xidle 2>/dev/null)
+    # Try to find xidle in multiple locations
+    local xidle_cmd=""
+    for path in "$HOME/.local/bin/xidle" "/usr/local/bin/xidle" "/usr/bin/xidle"; do
+        if [[ -x "$path" ]]; then
+            xidle_cmd="$path"
+            break
+        fi
+    done
+
+    if [[ -z "$xidle_cmd" ]]; then
+        log "WARNING: xidle not found, assuming user is active"
+        echo "0"
+        return
+    fi
+
+    idle_ms=$($xidle_cmd 2>/dev/null)
 
     if [[ -z "$idle_ms" ]]; then
         # If xidle fails, assume user is active (safer default)

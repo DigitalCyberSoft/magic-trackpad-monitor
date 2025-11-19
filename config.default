@@ -1,0 +1,19 @@
+# Magic Trackpad Monitor Configuration
+# This file configures the trackpad monitoring service
+
+# Time between connection checks (in seconds)
+# Default: 10 seconds
+CHECK_INTERVAL=10
+
+# Idle threshold before pausing monitoring (in seconds)
+# The monitor will pause when keyboard is idle for this duration
+# Default: 600 seconds (10 minutes)
+IDLE_THRESHOLD=600
+
+# Time without input events to consider trackpad stuck (in seconds)
+# Default: 30 seconds
+STUCK_THRESHOLD=30
+
+# Days before device MAC cache expires
+# Default: 30 days
+CACHE_EXPIRY_DAYS=30

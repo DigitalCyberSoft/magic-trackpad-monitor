@@ -1,11 +1,11 @@
 [Unit]
-Description=Fast Magic Trackpad Auto-reconnect
+Description=Magic Trackpad Auto-reconnect Monitor
 After=bluetooth.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=/home/user/trackpad-monitor.sh
+ExecStart=%h/.local/bin/trackpad-monitor
 Restart=always
 RestartSec=1
 
