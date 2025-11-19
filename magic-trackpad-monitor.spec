@@ -11,21 +11,19 @@ URL:            https://github.com/DigitalCyberSoft/magic-trackpad-monitor
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-%if 0%{?rhel} >= 10
-BuildRequires:  libXss-devel
-%else
+BuildRequires:  systemd-rpm-macros
+%if ! 0%{?rhel} >= 10
+# X11 libraries not available on RHEL 10
 BuildRequires:  libXScrnSaver-devel
 %endif
-BuildRequires:  systemd-rpm-macros
 
 Requires:       bluez
+Requires:       systemd
+%if ! 0%{?rhel} >= 10
+# X11 dependencies not required on RHEL 10
 Requires:       xinput
-%if 0%{?rhel} >= 10
-Requires:       libXss
-%else
 Requires:       libXScrnSaver
 %endif
-Requires:       systemd
 
 %description
 Magic Trackpad Monitor is an automatic monitoring and reconnection service
@@ -45,8 +43,10 @@ Features:
 %setup -q
 
 %build
-# Compile xidle
+# Compile xidle (skip on RHEL 10 where X11 libs may not be available)
+%if ! 0%{?rhel} >= 10
 gcc -o xidle xidle.c -lX11 -lXss
+%endif
 
 %install
 # Create directories
@@ -57,7 +57,9 @@ install -d %{buildroot}%{_userunitdir}
 # Install binaries
 install -D -m 755 trackpad-monitor.sh %{buildroot}%{_bindir}/trackpad-monitor
 install -D -m 755 magic-trackpad-status %{buildroot}%{_bindir}/magic-trackpad-status
+%if ! 0%{?rhel} >= 10
 install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
+%endif
 
 # Install default config
 install -D -m 644 config.default %{buildroot}%{_datadir}/%{name}/config.default
@@ -69,7 +71,9 @@ install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/mag
 %doc README.md
 %{_bindir}/trackpad-monitor
 %{_bindir}/magic-trackpad-status
+%if ! 0%{?rhel} >= 10
 %{_bindir}/xidle
+%endif
 %{_datadir}/%{name}/config.default
 %{_userunitdir}/magic-trackpad-monitor.service
 
