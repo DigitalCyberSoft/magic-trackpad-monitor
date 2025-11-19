@@ -57,8 +57,15 @@ echo "Service Status:"
 
 # Check if service unit exists
 SERVICE_FOUND=false
-if systemctl --user list-unit-files magic-trackpad-monitor.service &>/dev/null | grep -q "magic-trackpad-monitor.service"; then
+if systemctl --user list-unit-files magic-trackpad-monitor.service 2>/dev/null | grep -q "magic-trackpad-monitor.service"; then
     SERVICE_FOUND=true
+fi
+
+# Alternative check: see if systemctl can find the unit at all
+if [ "$SERVICE_FOUND" = false ]; then
+    if systemctl --user cat magic-trackpad-monitor.service &>/dev/null; then
+        SERVICE_FOUND=true
+    fi
 fi
 
 if [ "$SERVICE_FOUND" = false ]; then

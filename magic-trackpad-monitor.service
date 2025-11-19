@@ -5,7 +5,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/trackpad-monitor
+ExecStart=/usr/bin/trackpad-monitor
 Restart=always
 RestartSec=1
 

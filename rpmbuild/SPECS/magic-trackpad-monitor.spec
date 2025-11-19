@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           magic-trackpad-monitor
-Version:        0.2.1
+Version:        0.2.3
 Release:        1%{?dist}
 Summary:        Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux
 
@@ -11,13 +11,19 @@ URL:            https://github.com/DigitalCyberSoft/magic-trackpad-monitor
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
-BuildRequires:  (libXScrnSaver-devel or libXss-devel)
 BuildRequires:  systemd-rpm-macros
+%if ! 0%{?rhel} >= 10
+# X11 libraries not available on RHEL 10
+BuildRequires:  libXScrnSaver-devel
+%endif
 
 Requires:       bluez
-Requires:       xinput
-Requires:       (libXScrnSaver or libXss)
 Requires:       systemd
+%if ! 0%{?rhel} >= 10
+# X11 dependencies not required on RHEL 10
+Requires:       xinput
+Requires:       libXScrnSaver
+%endif
 
 %description
 Magic Trackpad Monitor is an automatic monitoring and reconnection service
@@ -37,8 +43,10 @@ Features:
 %setup -q
 
 %build
-# Compile xidle
+# Compile xidle (skip on RHEL 10 where X11 libs may not be available)
+%if ! 0%{?rhel} >= 10
 gcc -o xidle xidle.c -lX11 -lXss
+%endif
 
 %install
 # Create directories
@@ -49,7 +57,9 @@ install -d %{buildroot}%{_userunitdir}
 # Install binaries
 install -D -m 755 trackpad-monitor.sh %{buildroot}%{_bindir}/trackpad-monitor
 install -D -m 755 magic-trackpad-status %{buildroot}%{_bindir}/magic-trackpad-status
+%if ! 0%{?rhel} >= 10
 install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
+%endif
 
 # Install default config
 install -D -m 644 config.default %{buildroot}%{_datadir}/%{name}/config.default
@@ -61,7 +71,9 @@ install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/mag
 %doc README.md
 %{_bindir}/trackpad-monitor
 %{_bindir}/magic-trackpad-status
+%if ! 0%{?rhel} >= 10
 %{_bindir}/xidle
+%endif
 %{_datadir}/%{name}/config.default
 %{_userunitdir}/magic-trackpad-monitor.service
 
@@ -92,7 +104,7 @@ if [ $1 -eq 0 ]; then
 fi
 
 %changelog
-* Wed Nov 19 2025 Builder - 0.2.1-1
+* Wed Nov 19 2025 Builder - 0.2.3-1
 - Initial package release
 - XDG-compliant configuration and data directories
 - Pre-compiled xidle binary included
