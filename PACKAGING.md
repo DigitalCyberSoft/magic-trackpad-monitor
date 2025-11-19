@@ -72,7 +72,7 @@ Output file:
 sudo dnf install ./magic-trackpad-monitor-*.rpm
 
 # Test
-trackpad-status
+magic-trackpad-status
 systemctl --user status magic-trackpad-monitor.service
 
 # Uninstall
@@ -85,7 +85,7 @@ sudo dnf remove magic-trackpad-monitor
 sudo apt install ./magic-trackpad-monitor_*.deb
 
 # Test
-trackpad-status
+magic-trackpad-status
 systemctl --user status magic-trackpad-monitor.service
 
 # Uninstall
@@ -214,7 +214,7 @@ rpmbuild --target=aarch64 ...
 | File | Location | Description |
 |------|----------|-------------|
 | trackpad-monitor | /usr/bin/ | Main monitoring script |
-| trackpad-status | /usr/bin/ | Status checker |
+| magic-trackpad-status | /usr/bin/ | Status checker |
 | xidle | /usr/bin/ | X11 idle detector |
 | config.default | /usr/share/magic-trackpad-monitor/ | Default configuration |
 | magic-trackpad-monitor.service | /usr/lib/systemd/user/ | Systemd service |

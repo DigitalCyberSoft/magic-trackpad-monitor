@@ -151,7 +151,7 @@ install_files() {
 
     # Install binaries
     install -m 755 trackpad-monitor.sh "$INSTALL_PREFIX/bin/trackpad-monitor"
-    install -m 755 trackpad-status "$INSTALL_PREFIX/bin/trackpad-status"
+    install -m 755 magic-trackpad-status "$INSTALL_PREFIX/bin/magic-trackpad-status"
     install -m 755 xidle "$INSTALL_PREFIX/bin/xidle"
 
     # Install default config
@@ -204,7 +204,7 @@ uninstall() {
 
     # Remove files
     rm -f "$INSTALL_PREFIX/bin/trackpad-monitor"
-    rm -f "$INSTALL_PREFIX/bin/trackpad-status"
+    rm -f "$INSTALL_PREFIX/bin/magic-trackpad-status"
     rm -f "$INSTALL_PREFIX/bin/xidle"
     rm -rf "$INSTALL_PREFIX/share/$PACKAGE_NAME"
     rm -f "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
@@ -275,7 +275,7 @@ main() {
     log_success "Installation complete!"
     echo ""
     log_info "Commands:"
-    log_info "  trackpad-status                      - Check trackpad status"
+    log_info "  magic-trackpad-status                      - Check trackpad status"
     log_info "  systemctl --user status magic-trackpad-monitor.service"
     log_info "  systemctl --user stop magic-trackpad-monitor.service"
     log_info "  systemctl --user restart magic-trackpad-monitor.service"

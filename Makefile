@@ -46,7 +46,7 @@ install: build
 
 	# Install binaries
 	install -D -m 755 trackpad-monitor.sh $(DESTDIR)$(BINDIR)/trackpad-monitor
-	install -D -m 755 trackpad-status $(DESTDIR)$(BINDIR)/trackpad-status
+	install -D -m 755 magic-trackpad-status $(DESTDIR)$(BINDIR)/magic-trackpad-status
 	install -D -m 755 xidle $(DESTDIR)$(BINDIR)/xidle
 
 	# Install default config
@@ -83,7 +83,7 @@ uninstall:
 
 	# Remove files
 	rm -f $(BINDIR)/trackpad-monitor
-	rm -f $(BINDIR)/trackpad-status
+	rm -f $(BINDIR)/magic-trackpad-status
 	rm -f $(BINDIR)/xidle
 	rm -rf $(DATADIR)/$(PACKAGE_NAME)
 	rm -f $(SERVICEDIR)/magic-trackpad-monitor.service
@@ -112,7 +112,7 @@ rpm: build
 	# Create source tarball
 	tar czf rpmbuild/SOURCES/$(PACKAGE_NAME)-$(VERSION).tar.gz \
 		--transform 's,^,$(PACKAGE_NAME)-$(VERSION)/,' \
-		trackpad-monitor.sh trackpad-status xidle.c config.default \
+		trackpad-monitor.sh magic-trackpad-status xidle.c config.default \
 		magic-trackpad-monitor.service README.md xidle
 
 	# Generate spec file

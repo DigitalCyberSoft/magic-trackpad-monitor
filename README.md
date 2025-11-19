@@ -15,7 +15,7 @@ Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux 
 ## Components
 
 - **trackpad-monitor** - Main monitoring script
-- **trackpad-status** - Status checker command-line tool
+- **magic-trackpad-status** - Status checker command-line tool
 - **xidle** - X11 idle time detector (lightweight xprintidle alternative)
 - **magic-trackpad-monitor.service** - systemd user service file
 
@@ -75,12 +75,12 @@ systemctl --user start magic-trackpad-monitor.service
 After installing via any method, you have two options to set up the service:
 
 #### Option A: Interactive Setup (Easiest)
-Simply run `trackpad-status` and it will guide you through the setup:
+Simply run `magic-trackpad-status` and it will guide you through the setup:
 ```bash
-trackpad-status
+magic-trackpad-status
 ```
 
-If the service isn't installed, enabled, or running, `trackpad-status` will detect this and offer to:
+If the service isn't installed, enabled, or running, `magic-trackpad-status` will detect this and offer to:
 - Install the service for your user
 - Enable it to start on login
 - Start it immediately
@@ -98,7 +98,7 @@ systemctl --user start magic-trackpad-monitor.service
 Check that everything is working:
 ```bash
 # Check service status (interactive helper)
-trackpad-status
+magic-trackpad-status
 
 # Or check manually
 systemctl --user status magic-trackpad-monitor.service
@@ -111,7 +111,7 @@ journalctl --user -u magic-trackpad-monitor.service -f
 
 ### Check Status
 ```bash
-trackpad-status
+magic-trackpad-status
 ```
 
 Shows:

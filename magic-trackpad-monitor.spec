@@ -48,7 +48,7 @@ install -d %{buildroot}%{_userunitdir}
 
 # Install binaries
 install -D -m 755 trackpad-monitor.sh %{buildroot}%{_bindir}/trackpad-monitor
-install -D -m 755 trackpad-status %{buildroot}%{_bindir}/trackpad-status
+install -D -m 755 magic-trackpad-status %{buildroot}%{_bindir}/magic-trackpad-status
 install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
 
 # Install default config
@@ -60,7 +60,7 @@ install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/mag
 %files
 %doc README.md
 %{_bindir}/trackpad-monitor
-%{_bindir}/trackpad-status
+%{_bindir}/magic-trackpad-status
 %{_bindir}/xidle
 %{_datadir}/%{name}/config.default
 %{_userunitdir}/magic-trackpad-monitor.service
@@ -75,7 +75,7 @@ echo "  systemctl --user enable magic-trackpad-monitor.service"
 echo "  systemctl --user start magic-trackpad-monitor.service"
 echo ""
 echo "Configuration file will be created at: ~/.config/trackpad-monitor/config"
-echo "Check status with: trackpad-status"
+echo "Check status with: magic-trackpad-status"
 echo ""
 
 %preun
