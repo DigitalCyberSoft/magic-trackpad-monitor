@@ -17,3 +17,11 @@ STUCK_THRESHOLD=30
 # Days before device MAC cache expires
 # Default: 30 days
 CACHE_EXPIRY_DAYS=30
+
+# Display server detection (auto, x11, wayland, fallback)
+# auto: Automatically detect display server (recommended)
+# x11: Force X11/Xorg mode
+# wayland: Force Wayland mode
+# fallback: Use fallback methods (no display server)
+# Default: auto
+DISPLAY_SERVER=auto

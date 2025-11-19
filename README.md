@@ -9,6 +9,7 @@ Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux 
 - **Stuck Device Recovery** - Detects frozen trackpad and power cycles Bluetooth adapter
 - **Last Connection Tracking** - Tracks when trackpad was last successfully connected
 - **XDG-Compliant** - Configuration in `~/.config/trackpad-monitor/`, data in `~/.local/share/trackpad-monitor/`
+- **Display Server Support** - Works on both **X11/Xorg** and **Wayland** with automatic detection
 - **Easy Packaging** - RPM, DEB, and bash installer support
 
 ## Components
@@ -162,12 +163,70 @@ STUCK_THRESHOLD=30
 
 # Days before device MAC cache expires
 CACHE_EXPIRY_DAYS=30
+
+# Display server detection (auto, x11, wayland, fallback)
+DISPLAY_SERVER=auto
 ```
 
 After editing the config, restart the service:
 ```bash
 systemctl --user restart magic-trackpad-monitor.service
 ```
+
+## Display Server Support
+
+Magic Trackpad Monitor automatically detects and adapts to your display server (X11 or Wayland).
+
+### Supported Display Servers
+
+✅ **X11/Xorg** (Full support)
+- Precise idle detection (millisecond accuracy via xidle)
+- Complete stuck detection (xinput device status)
+- Works on all X11-based desktops
+
+✅ **Wayland** (Full support with adaptations)
+- Idle detection via systemd-logind
+- Device presence detection via /proc
+- Simplified stuck detection
+- Tested on: GNOME, KDE Plasma, Sway
+
+✅ **Fallback Mode**
+- Uses /dev/input monitoring when display server unknown
+- Works without X11 or Wayland
+
+### Detection Method
+
+The monitor automatically detects your display server using (in order):
+1. `$XDG_SESSION_TYPE` environment variable
+2. `$WAYLAND_DISPLAY` and `$DISPLAY` sockets
+3. `loginctl` session type query
+
+You can override detection by setting `DISPLAY_SERVER` in the config.
+
+### X11 vs Wayland Differences
+
+| Feature | X11 | Wayland |
+|---------|-----|---------|
+| Idle Detection | Millisecond precision (xidle) | ~5min threshold (logind) |
+| Device Stuck Detection | Full (xinput properties) | Simplified (presence only) |
+| Reconnection | ✅ Identical | ✅ Identical |
+| Bluetooth Control | ✅ Identical | ✅ Identical |
+
+**Note:** The 10-minute idle threshold works well with both X11's precise detection and Wayland's coarser-grained system idle hints.
+
+### Dependencies by Display Server
+
+**X11:**
+- `xinput` - Input device management
+- `xidle` - Idle time detection (included in package)
+- `libXScrnSaver` - X11 Screen Saver extension
+
+**Wayland:**
+- `systemd` - For logind idle detection (standard on modern Linux)
+- `/proc/bus/input/devices` - For device detection (kernel interface)
+
+**Both:**
+- `bluetoothctl` - Bluetooth management (BlueZ)
 
 ## Troubleshooting
 
@@ -183,12 +242,20 @@ Ensure it's paired:
 bluetoothctl devices | grep -i "magic trackpad"
 ```
 
-### xidle not working
+### xidle not working (X11 only)
 Test manually:
 ```bash
 ~/.local/bin/xidle
 ```
 Should return idle time in milliseconds.
+
+**Note:** xidle is only used on X11. On Wayland, systemd-logind is used instead.
+
+### Check which display server is detected
+View the service logs to see which display server was detected:
+```bash
+journalctl --user -u magic-trackpad-monitor.service | grep "Detected display server"
+```
 
 ## Building Packages
 
@@ -231,12 +298,24 @@ make uninstall
 
 ## Requirements
 
+### Core Requirements (All Platforms)
 - Linux with systemd
-- X11 (not Wayland)
 - BlueZ 5.x (bluez package)
-- xinput
-- libXScrnSaver
-- gcc (only for building from source)
+
+### Display Server Specific
+
+**X11/Xorg:**
+- xinput - Input device management
+- libXScrnSaver - For xidle idle detection
+- xidle (included in package)
+
+**Wayland:**
+- systemd-logind (standard on modern Linux)
+- Kernel with /proc/bus/input/devices support (standard)
+
+### Build Requirements (Source Only)
+- gcc - C compiler
+- libXScrnSaver-devel / libxss-dev - For compiling xidle
 
 ## File Locations
 
