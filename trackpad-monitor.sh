@@ -194,7 +194,8 @@ get_idle_time_fallback() {
     local latest=0
 
     # Find all input devices
-    for device in /dev/input/event* 2>/dev/null; do
+    for device in /dev/input/event*; do
+        [[ -e "$device" ]] || continue  # Skip if glob didn't match
         if [[ -r "$device" ]]; then
             local mtime=$(stat -c %Y "$device" 2>/dev/null)
             if [[ -n "$mtime" ]] && [[ $mtime -gt $latest ]]; then
