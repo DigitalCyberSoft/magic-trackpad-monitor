@@ -12,15 +12,15 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros
-%if ! 0%{?rhel} >= 10
-# X11 libraries not available on RHEL 10
+%if 0%{?fedora} || 0%{?rhel} < 10
+# X11 libraries for xidle compilation
 BuildRequires:  libXScrnSaver-devel
 %endif
 
 Requires:       bluez
 Requires:       systemd
-%if ! 0%{?rhel} >= 10
-# X11 dependencies not required on RHEL 10
+%if 0%{?fedora} || 0%{?rhel} < 10
+# X11 dependencies for xidle
 Requires:       xinput
 Requires:       libXScrnSaver
 %endif
@@ -43,8 +43,8 @@ Features:
 %setup -q
 
 %build
-# Compile xidle (skip on RHEL 10 where X11 libs may not be available)
-%if ! 0%{?rhel} >= 10
+# Compile xidle (skip on RHEL 10+ where X11 libs may not be available)
+%if 0%{?fedora} || 0%{?rhel} < 10
 gcc -o xidle xidle.c -lX11 -lXss
 %endif
 
@@ -57,7 +57,7 @@ install -d %{buildroot}%{_userunitdir}
 # Install binaries
 install -D -m 755 trackpad-monitor.sh %{buildroot}%{_bindir}/trackpad-monitor
 install -D -m 755 magic-trackpad-status %{buildroot}%{_bindir}/magic-trackpad-status
-%if ! 0%{?rhel} >= 10
+%if 0%{?fedora} || 0%{?rhel} < 10
 install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
 %endif
 
@@ -71,7 +71,7 @@ install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/mag
 %doc README.md
 %{_bindir}/trackpad-monitor
 %{_bindir}/magic-trackpad-status
-%if ! 0%{?rhel} >= 10
+%if 0%{?fedora} || 0%{?rhel} < 10
 %{_bindir}/xidle
 %endif
 %{_datadir}/%{name}/config.default
