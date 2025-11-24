@@ -6,7 +6,7 @@ BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
 SERVICEDIR ?= $(HOME)/.config/systemd/user
 
-VERSION ?= 0.2.5
+VERSION ?= 0.2.6
 PACKAGE_NAME = magic-trackpad-monitor
 
 # Detect architecture
