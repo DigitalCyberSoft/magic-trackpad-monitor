@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           magic-trackpad-monitor
-Version:        0.2.3
+Version:        0.2.7
 Release:        1%{?dist}
 Summary:        Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux
 
@@ -12,15 +12,15 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros
-%if ! 0%{?rhel} >= 10
-# X11 libraries not available on RHEL 10
+%if 0%{?fedora} || (0%{?rhel} && 0%{?rhel} < 10)
+# X11 libraries for xidle compilation
 BuildRequires:  libXScrnSaver-devel
 %endif
 
 Requires:       bluez
 Requires:       systemd
-%if ! 0%{?rhel} >= 10
-# X11 dependencies not required on RHEL 10
+%if 0%{?fedora} || (0%{?rhel} && 0%{?rhel} < 10)
+# X11 dependencies for xidle
 Requires:       xinput
 Requires:       libXScrnSaver
 %endif
@@ -43,8 +43,8 @@ Features:
 %setup -q
 
 %build
-# Compile xidle (skip on RHEL 10 where X11 libs may not be available)
-%if ! 0%{?rhel} >= 10
+# Compile xidle (skip on RHEL 10+ where X11 libs may not be available)
+%if 0%{?fedora} || (0%{?rhel} && 0%{?rhel} < 10)
 gcc -o xidle xidle.c -lX11 -lXss
 %endif
 
@@ -57,7 +57,7 @@ install -d %{buildroot}%{_userunitdir}
 # Install binaries
 install -D -m 755 trackpad-monitor.sh %{buildroot}%{_bindir}/trackpad-monitor
 install -D -m 755 magic-trackpad-status %{buildroot}%{_bindir}/magic-trackpad-status
-%if ! 0%{?rhel} >= 10
+%if 0%{?fedora} || (0%{?rhel} && 0%{?rhel} < 10)
 install -D -m 755 xidle %{buildroot}%{_bindir}/xidle
 %endif
 
@@ -71,7 +71,7 @@ install -D -m 644 magic-trackpad-monitor.service %{buildroot}%{_userunitdir}/mag
 %doc README.md
 %{_bindir}/trackpad-monitor
 %{_bindir}/magic-trackpad-status
-%if ! 0%{?rhel} >= 10
+%if 0%{?fedora} || (0%{?rhel} && 0%{?rhel} < 10)
 %{_bindir}/xidle
 %endif
 %{_datadir}/%{name}/config.default
@@ -104,7 +104,21 @@ if [ $1 -eq 0 ]; then
 fi
 
 %changelog
-* Wed Nov 19 2025 Builder - 0.2.3-1
+* Tue Nov 25 2025 Builder - 0.2.7-1
+- Fix log() function to output to stderr instead of stdout
+- Fix RPM conditional syntax for RHEL version checking
+- Fix Device Enabled regex pattern for trailing whitespace
+- Add error checking to bluetooth power cycling
+- Fix case-insensitive connection success detection
+- Remove unused last_event_time variable
+- Fix install.sh version and xidle conditional compilation
+- Fix COPR Makefile to use magic-trackpad-status filename
+- Fix service file path for user-level installations
+- Add error checking to magic-trackpad-status systemctl calls
+- Cache bluetoothctl output to avoid multiple calls
+- Validate timestamp is numeric before arithmetic
+
+* Wed Nov 19 2025 Builder - 0.2.6-1
 - Initial package release
 - XDG-compliant configuration and data directories
 - Pre-compiled xidle binary included

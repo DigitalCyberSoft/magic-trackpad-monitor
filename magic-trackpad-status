@@ -14,10 +14,11 @@ if [[ -f "$DATA_DIR/device-mac-cache" ]]; then
     MAC=$(cat "$DATA_DIR/device-mac-cache")
     echo "Monitored Device: $MAC"
 
-    # Get device info
-    if bluetoothctl info "$MAC" &>/dev/null; then
-        NAME=$(bluetoothctl info "$MAC" | grep "Name:" | cut -d: -f2- | xargs)
-        CONNECTED=$(bluetoothctl info "$MAC" | grep "Connected:" | awk '{print $2}')
+    # Get device info (cache output to avoid multiple calls)
+    DEVICE_INFO=$(bluetoothctl info "$MAC" 2>/dev/null)
+    if [[ -n "$DEVICE_INFO" ]]; then
+        NAME=$(echo "$DEVICE_INFO" | grep "Name:" | cut -d: -f2- | xargs)
+        CONNECTED=$(echo "$DEVICE_INFO" | grep "Connected:" | awk '{print $2}')
         echo "Device Name: $NAME"
         echo "Currently Connected: $CONNECTED"
     fi
@@ -32,9 +33,9 @@ if [[ -f "$DATA_DIR/last-connected" ]]; then
     LAST_CONNECTED=$(cat "$DATA_DIR/last-connected")
     echo "Last Verified Connected: $LAST_CONNECTED"
 
-    # Calculate time since
-    TIMESTAMP=$(echo "$LAST_CONNECTED" | grep -oP '\(\K[0-9]+(?=\))')
-    if [[ -n "$TIMESTAMP" ]]; then
+    # Calculate time since (validate timestamp is numeric)
+    TIMESTAMP=$(echo "$LAST_CONNECTED" | grep -oP '\(\K[0-9]+(?=\))' || true)
+    if [[ -n "$TIMESTAMP" ]] && [[ "$TIMESTAMP" =~ ^[0-9]+$ ]]; then
         CURRENT=$(date +%s)
         SECONDS_AGO=$((CURRENT - TIMESTAMP))
 
@@ -97,9 +98,18 @@ if [ "$SERVICE_FOUND" = false ]; then
         if [[ -n "$SERVICE_FILE" ]]; then
             mkdir -p ~/.config/systemd/user
             cp "$SERVICE_FILE" ~/.config/systemd/user/
-            systemctl --user daemon-reload
-            systemctl --user enable magic-trackpad-monitor.service
-            systemctl --user start magic-trackpad-monitor.service
+            if ! systemctl --user daemon-reload; then
+                echo "Error: Failed to reload systemd daemon"
+                exit 1
+            fi
+            if ! systemctl --user enable magic-trackpad-monitor.service; then
+                echo "Error: Failed to enable service"
+                exit 1
+            fi
+            if ! systemctl --user start magic-trackpad-monitor.service; then
+                echo "Error: Failed to start service"
+                exit 1
+            fi
             echo "Service installed and started successfully!"
         else
             echo "Error: Could not find magic-trackpad-monitor.service file"

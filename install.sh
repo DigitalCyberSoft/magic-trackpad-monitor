@@ -6,7 +6,7 @@
 set -e
 
 PACKAGE_NAME="magic-trackpad-monitor"
-VERSION="0.1.0"
+VERSION="0.2.7"
 INSTALL_PREFIX="${PREFIX:-$HOME/.local}"
 
 # Colors for output
@@ -133,13 +133,18 @@ build_xidle() {
         exit 1
     fi
 
-    gcc -o xidle xidle.c -lX11 -lXss
+    # Check if X11 development libraries are available
+    if ! pkg-config --exists x11 xscrnsaver 2>/dev/null; then
+        log_warning "X11 development libraries not found, skipping xidle compilation"
+        log_info "Idle detection will use fallback method (input device monitoring)"
+        return 0
+    fi
 
-    if [ $? -eq 0 ]; then
+    if gcc -o xidle xidle.c -lX11 -lXss 2>/dev/null; then
         log_success "xidle compiled successfully"
     else
-        log_error "Failed to compile xidle"
-        exit 1
+        log_warning "Failed to compile xidle, using fallback idle detection"
+        return 0
     fi
 }
 
@@ -155,13 +160,17 @@ install_files() {
     # Install binaries
     install -m 755 trackpad-monitor.sh "$INSTALL_PREFIX/bin/trackpad-monitor"
     install -m 755 magic-trackpad-status "$INSTALL_PREFIX/bin/magic-trackpad-status"
-    install -m 755 xidle "$INSTALL_PREFIX/bin/xidle"
+    if [ -f xidle ]; then
+        install -m 755 xidle "$INSTALL_PREFIX/bin/xidle"
+    fi
 
     # Install default config
     install -m 644 config.default "$INSTALL_PREFIX/share/$PACKAGE_NAME/config.default"
 
-    # Install systemd service
-    install -m 644 magic-trackpad-monitor.service "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
+    # Install systemd service with corrected path for user install
+    sed "s|/usr/bin/trackpad-monitor|$INSTALL_PREFIX/bin/trackpad-monitor|g" \
+        magic-trackpad-monitor.service > "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
+    chmod 644 "$HOME/.config/systemd/user/magic-trackpad-monitor.service"
 
     log_success "Files installed successfully"
 }

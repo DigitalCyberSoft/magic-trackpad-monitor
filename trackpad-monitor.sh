@@ -76,7 +76,7 @@ LAST_CONNECTED_FILE="$DATA_DIR/last-connected"
 DEVICE_CACHE_FILE="$DATA_DIR/device-mac-cache"
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >&2
 }
 
 # Detect display server type
@@ -103,7 +103,7 @@ detect_display_server() {
     fi
 
     # Method 3: Check for X11 display
-    if [[ -n "$DISPLAY" ]] && [[ ! -n "$WAYLAND_DISPLAY" ]]; then
+    if [[ -n "$DISPLAY" ]] && [[ -z "$WAYLAND_DISPLAY" ]]; then
         echo "x11"
         return
     fi
@@ -198,7 +198,7 @@ get_idle_time_fallback() {
         [[ -e "$device" ]] || continue  # Skip if glob didn't match
         if [[ -r "$device" ]]; then
             local mtime=$(stat -c %Y "$device" 2>/dev/null)
-            if [[ -n "$mtime" ]] && [[ $mtime -gt $latest ]]; then
+            if [[ -n "$mtime" ]] && [[ "$mtime" -gt "$latest" ]]; then
                 latest=$mtime
             fi
         fi
@@ -316,7 +316,7 @@ is_trackpad_stuck() {
             fi
 
             # Check if device is enabled
-            if xinput list-props "$trackpad_id" 2>/dev/null | grep "Device Enabled" | grep -q "0$"; then
+            if xinput list-props "$trackpad_id" 2>/dev/null | grep "Device Enabled" | grep -qE '\b0\s*$'; then
                 return 0  # Disabled = stuck
             fi
 
@@ -336,9 +336,14 @@ is_trackpad_stuck() {
 reset_bluetooth() {
     log "Resetting Bluetooth adapter to fix stuck trackpad..."
     # Modern BlueZ doesn't have hciconfig, use bluetoothctl power cycle instead
-    bluetoothctl power off &>/dev/null
+    if ! bluetoothctl power off &>/dev/null; then
+        log "WARNING: Failed to power off Bluetooth adapter"
+    fi
     sleep 1
-    bluetoothctl power on &>/dev/null
+    if ! bluetoothctl power on &>/dev/null; then
+        log "WARNING: Failed to power on Bluetooth adapter"
+        return 1
+    fi
     sleep 2
     log "Bluetooth adapter power cycled"
     return 0
@@ -349,7 +354,7 @@ connect_trackpad() {
     local output
     output=$(bluetoothctl connect "$TRACKPAD_MAC" 2>&1)
 
-    if echo "$output" | grep -q "Connection successful\|already connected"; then
+    if echo "$output" | grep -qi "Connection successful\|already connected"; then
         local timestamp=$(date '+%Y-%m-%d %H:%M:%S (%s)')
         echo "$timestamp" > "$LAST_CONNECTED_FILE"
         log "Magic Trackpad connected at $timestamp"
@@ -392,9 +397,6 @@ else
     log "Magic Trackpad already connected"
 fi
 
-# Track last successful check
-last_event_time=$(date +%s)
-
 # Main monitoring loop
 while true; do
     sleep "$CHECK_INTERVAL"
@@ -402,7 +404,7 @@ while true; do
     # Check keyboard idle time
     keyboard_idle=$(get_keyboard_idle_time)
 
-    if [[ $keyboard_idle -ge $IDLE_THRESHOLD ]]; then
+    if [[ "$keyboard_idle" -ge "$IDLE_THRESHOLD" ]]; then
         log "Keyboard idle for ${keyboard_idle}s (>= ${IDLE_THRESHOLD}s), user away - skipping checks"
         continue
     fi
@@ -411,10 +413,8 @@ while true; do
     if ! is_trackpad_connected; then
         log "Trackpad disconnected (keyboard active: idle ${keyboard_idle}s), reconnecting..."
         reconnect_trackpad
-        last_event_time=$(date +%s)
     elif is_trackpad_stuck; then
         log "Trackpad appears stuck (keyboard active: idle ${keyboard_idle}s), attempting recovery..."
         reconnect_trackpad
-        last_event_time=$(date +%s)
     fi
 done
