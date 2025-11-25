@@ -19,7 +19,6 @@ CHECK_INTERVAL=10  # seconds between checks
 IDLE_THRESHOLD=600  # 10 minutes in seconds
 STUCK_THRESHOLD=30  # seconds without events to consider trackpad stuck
 CACHE_EXPIRY_DAYS=30  # Only track trackpads connected in last 30 days
-DISPLAY_SERVER="auto"  # auto, x11, wayland, or fallback
 
 # Load configuration file if it exists
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -39,7 +38,6 @@ if [[ -f "$CONFIG_FILE" ]]; then
             IDLE_THRESHOLD) IDLE_THRESHOLD="$value" ;;
             STUCK_THRESHOLD) STUCK_THRESHOLD="$value" ;;
             CACHE_EXPIRY_DAYS) CACHE_EXPIRY_DAYS="$value" ;;
-            DISPLAY_SERVER) DISPLAY_SERVER="$value" ;;
         esac
     done < <(grep -v '^[[:space:]]*$' "$CONFIG_FILE")
 else
@@ -64,10 +62,6 @@ STUCK_THRESHOLD=30
 # Days before device MAC cache expires
 # Default: 30 days
 CACHE_EXPIRY_DAYS=30
-
-# Display server detection (auto, x11, wayland, fallback)
-# Default: auto (automatically detect)
-DISPLAY_SERVER=auto
 EOF
 fi
 
@@ -79,160 +73,63 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >&2
 }
 
-# Detect display server type
-detect_display_server() {
-    # Allow manual override from config
-    if [[ "$DISPLAY_SERVER" != "auto" ]]; then
-        echo "$DISPLAY_SERVER"
-        return
-    fi
-
-    # Method 1: Check XDG_SESSION_TYPE (most reliable)
-    if [[ "$XDG_SESSION_TYPE" == "wayland" ]]; then
-        echo "wayland"
-        return
-    elif [[ "$XDG_SESSION_TYPE" == "x11" ]]; then
-        echo "x11"
-        return
-    fi
-
-    # Method 2: Check for Wayland display socket
-    if [[ -n "$WAYLAND_DISPLAY" ]]; then
-        echo "wayland"
-        return
-    fi
-
-    # Method 3: Check for X11 display
-    if [[ -n "$DISPLAY" ]] && [[ -z "$WAYLAND_DISPLAY" ]]; then
-        echo "x11"
-        return
-    fi
-
-    # Method 4: Check loginctl session type
-    local session_id=$(loginctl show-user $(id -u) -p Display --value 2>/dev/null)
-    if [[ -n "$session_id" ]]; then
-        local session_type=$(loginctl show-session "$session_id" -p Type --value 2>/dev/null)
-        if [[ "$session_type" == "wayland" ]]; then
-            echo "wayland"
-            return
-        elif [[ "$session_type" == "x11" ]]; then
-            echo "x11"
-            return
-        fi
-    fi
-
-    # Fallback: unknown
-    echo "fallback"
-}
-
-# Get idle time using X11 (xidle)
-get_idle_time_x11() {
+# Get idle time using cascading detection methods
+# Priority: GNOME D-Bus > KDE D-Bus > xidle (X11) > assume active
+get_idle_time() {
     local idle_ms
-    # Try to find xidle in multiple locations
-    local xidle_cmd=""
-    for path in "$HOME/.local/bin/xidle" "/usr/local/bin/xidle" "/usr/bin/xidle"; do
-        if [[ -x "$path" ]]; then
-            xidle_cmd="$path"
-            break
-        fi
-    done
 
-    if [[ -z "$xidle_cmd" ]]; then
-        log "WARNING: xidle not found for X11, falling back"
-        get_idle_time_fallback
+    # 1. Try GNOME Mutter D-Bus (works on GNOME X11 + Wayland)
+    idle_ms=$(gdbus call --session \
+        --dest=org.gnome.Mutter.IdleMonitor \
+        --object-path /org/gnome/Mutter/IdleMonitor/Core \
+        --method org.gnome.Mutter.IdleMonitor.GetIdletime 2>/dev/null)
+    if [[ $? -eq 0 && -n "$idle_ms" ]]; then
+        # Extract number from "(uint64 12345,)"
+        idle_ms="${idle_ms//[^0-9]/}"
+        echo $((idle_ms / 1000))
         return
     fi
 
-    idle_ms=$($xidle_cmd 2>/dev/null)
-
-    if [[ -z "$idle_ms" ]]; then
-        # If xidle fails, assume user is active (safer default)
-        echo "0"
+    # 2. Try KDE KIdleTime D-Bus (works on KDE X11 + Wayland)
+    idle_ms=$(qdbus org.kde.KIdleTime /KIdleTime idleTime 2>/dev/null)
+    if [[ $? -eq 0 && -n "$idle_ms" ]]; then
+        echo $((idle_ms / 1000))
         return
     fi
 
-    # Convert milliseconds to seconds
-    echo $((idle_ms / 1000))
-}
-
-# Get idle time using Wayland (systemd-logind)
-get_idle_time_wayland() {
-    # Get current user session ID
-    local session_id=$(loginctl show-user $(id -u) -p Display --value 2>/dev/null)
-
-    if [[ -z "$session_id" ]]; then
-        log "WARNING: Could not get session ID, using fallback"
-        get_idle_time_fallback
-        return
-    fi
-
-    # Check if session is idle
-    local idle_hint=$(loginctl show-session "$session_id" -p IdleHint --value 2>/dev/null)
-
-    if [[ "$idle_hint" == "yes" ]]; then
-        # Get time since idle started
-        local idle_since=$(loginctl show-session "$session_id" -p IdleSinceHint --value 2>/dev/null)
-        if [[ -n "$idle_since" ]]; then
-            local idle_epoch=$(date -d "$idle_since" +%s 2>/dev/null)
-            if [[ -n "$idle_epoch" ]]; then
-                local now=$(date +%s)
-                echo $((now - idle_epoch))
+    # 3. Try xidle for X11 (works on Cinnamon, XFCE, i3, etc.)
+    if [[ -n "$DISPLAY" ]]; then
+        local xidle_cmd=""
+        for path in "$HOME/.local/bin/xidle" "/usr/local/bin/xidle" "/usr/bin/xidle"; do
+            if [[ -x "$path" ]]; then
+                xidle_cmd="$path"
+                break
+            fi
+        done
+        if [[ -n "$xidle_cmd" ]]; then
+            idle_ms=$($xidle_cmd 2>/dev/null)
+            if [[ $? -eq 0 && -n "$idle_ms" ]]; then
+                echo $((idle_ms / 1000))
                 return
             fi
         fi
-        # If idle but can't determine time, return threshold to trigger idle state
-        echo "$IDLE_THRESHOLD"
-    else
-        # Not idle
-        echo "0"
     fi
+
+    # 4. Fallback: assume user is active (safe default - always reconnect)
+    echo "0"
 }
 
-# Get idle time using fallback method (/dev/input monitoring)
-get_idle_time_fallback() {
-    local now=$(date +%s)
-    local latest=0
-
-    # Find all input devices
-    for device in /dev/input/event*; do
-        [[ -e "$device" ]] || continue  # Skip if glob didn't match
-        if [[ -r "$device" ]]; then
-            local mtime=$(stat -c %Y "$device" 2>/dev/null)
-            if [[ -n "$mtime" ]] && [[ "$mtime" -gt "$latest" ]]; then
-                latest=$mtime
-            fi
-        fi
-    done
-
-    if [[ $latest -eq 0 ]]; then
-        # Can't read input devices, assume active
-        echo "0"
-    else
-        echo $((now - latest))
-    fi
-}
-
-# Check if trackpad is present using X11 (xinput)
-is_trackpad_present_x11() {
-    # Check if trackpad device exists in xinput
-    if ! xinput list 2>/dev/null | grep -q "Magic Trackpad"; then
-        return 1  # Not present
-    fi
-    return 0
-}
-
-# Check if trackpad is present using Wayland (/proc)
-is_trackpad_present_wayland() {
-    # Check /proc/bus/input/devices for Magic Trackpad
+# Check if trackpad is present in the system
+is_trackpad_present() {
+    # Method 1: Check /proc/bus/input/devices (works on all Linux)
     if grep -q "Magic Trackpad" /proc/bus/input/devices 2>/dev/null; then
         return 0  # Present
     fi
+    # Method 2: Try xinput if available (X11)
+    if [[ -n "$DISPLAY" ]] && xinput list 2>/dev/null | grep -q "Magic Trackpad"; then
+        return 0  # Present
+    fi
     return 1  # Not present
-}
-
-# Check if trackpad is present (fallback - same as Wayland)
-is_trackpad_present_fallback() {
-    is_trackpad_present_wayland
 }
 
 # Find Magic Trackpad MAC address
@@ -271,25 +168,7 @@ if [[ -z "$TRACKPAD_MAC" ]]; then
     exit 1
 fi
 
-# Detect and log display server
-DETECTED_DISPLAY_SERVER=$(detect_display_server)
-log "Detected display server: $DETECTED_DISPLAY_SERVER"
 log "Monitoring Magic Trackpad: $TRACKPAD_MAC"
-
-# Get keyboard/mouse idle time - unified interface
-get_keyboard_idle_time() {
-    case "$DETECTED_DISPLAY_SERVER" in
-        x11)
-            get_idle_time_x11
-            ;;
-        wayland)
-            get_idle_time_wayland
-            ;;
-        *)
-            get_idle_time_fallback
-            ;;
-    esac
-}
 
 is_trackpad_connected() {
     if bluetoothctl info "$TRACKPAD_MAC" 2>/dev/null | grep -q "Connected: yes"; then
@@ -301,36 +180,22 @@ is_trackpad_connected() {
 }
 
 is_trackpad_stuck() {
-    case "$DETECTED_DISPLAY_SERVER" in
-        x11)
-            # X11: Full stuck detection using xinput
-            if ! is_trackpad_present_x11; then
-                return 0  # Not present = stuck
-            fi
+    # Check if device is present at all
+    if ! is_trackpad_present; then
+        return 0  # Not present = stuck
+    fi
 
-            # Try to get trackpad event device
-            local trackpad_id=$(xinput list 2>/dev/null | grep "Magic Trackpad" | grep -oP 'id=\K\d+' | head -1)
-
-            if [[ -z "$trackpad_id" ]]; then
-                return 0  # Can't find = stuck
-            fi
-
-            # Check if device is enabled
+    # On X11, also check if device is enabled via xinput
+    if [[ -n "$DISPLAY" ]]; then
+        local trackpad_id=$(xinput list 2>/dev/null | grep "Magic Trackpad" | grep -oP 'id=\K\d+' | head -1)
+        if [[ -n "$trackpad_id" ]]; then
             if xinput list-props "$trackpad_id" 2>/dev/null | grep "Device Enabled" | grep -qE '\b0\s*$'; then
                 return 0  # Disabled = stuck
             fi
+        fi
+    fi
 
-            return 1  # Appears to be working
-            ;;
-        wayland|*)
-            # Wayland/Fallback: Simplified - just check if device is present
-            # Cannot reliably detect "stuck" state on Wayland
-            if ! is_trackpad_present_wayland; then
-                return 0  # Not present = stuck
-            fi
-            return 1  # Present = not stuck (simplified)
-            ;;
-    esac
+    return 1  # Appears to be working
 }
 
 reset_bluetooth() {
@@ -401,8 +266,8 @@ fi
 while true; do
     sleep "$CHECK_INTERVAL"
 
-    # Check keyboard idle time
-    keyboard_idle=$(get_keyboard_idle_time)
+    # Check idle time
+    keyboard_idle=$(get_idle_time)
 
     if [[ "$keyboard_idle" -ge "$IDLE_THRESHOLD" ]]; then
         log "Keyboard idle for ${keyboard_idle}s (>= ${IDLE_THRESHOLD}s), user away - skipping checks"

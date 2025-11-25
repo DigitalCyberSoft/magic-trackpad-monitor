@@ -2,7 +2,7 @@
 %global debug_package %{nil}
 
 Name:           magic-trackpad-monitor
-Version:        0.2.7
+Version:        0.2.8
 Release:        1%{?dist}
 Summary:        Automatic monitoring and reconnection service for Apple Magic Trackpad on Linux
 
@@ -104,6 +104,13 @@ if [ $1 -eq 0 ]; then
 fi
 
 %changelog
+* Tue Nov 25 2025 Builder - 0.2.8-1
+- Implement cascading idle detection (GNOME D-Bus > KDE D-Bus > xidle > assume active)
+- Fix Wayland idle detection (now works on GNOME and KDE Wayland)
+- Remove broken /dev/input fallback (mtime doesn't update on input events)
+- Simplify codebase by removing 136 lines of code (5 functions -> 1)
+- Unify is_trackpad_present function for all display servers
+
 * Tue Nov 25 2025 Builder - 0.2.7-1
 - Fix log() function to output to stderr instead of stdout
 - Fix RPM conditional syntax for RHEL version checking

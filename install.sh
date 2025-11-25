@@ -6,7 +6,7 @@
 set -e
 
 PACKAGE_NAME="magic-trackpad-monitor"
-VERSION="0.2.7"
+VERSION="0.2.8"
 INSTALL_PREFIX="${PREFIX:-$HOME/.local}"
 
 # Colors for output
