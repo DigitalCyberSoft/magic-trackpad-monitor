@@ -6,8 +6,10 @@
 set -e
 
 PACKAGE_NAME="magic-trackpad-monitor"
-VERSION="0.2.8"
+VERSION="0.2.9"
 INSTALL_PREFIX="${PREFIX:-$HOME/.local}"
+REPO_URL="https://github.com/DigitalCyberSoft/magic-trackpad-monitor.git"
+CLEANUP_DIR=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -54,6 +56,41 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Ensure source files are available (download if running via curl | bash)
+ensure_source_files() {
+    if [ -f "trackpad-monitor.sh" ] && [ -f "xidle.c" ]; then
+        return 0
+    fi
+
+    log_info "Downloading source files..."
+    CLEANUP_DIR=$(mktemp -d)
+
+    if command_exists git; then
+        git clone --depth 1 "$REPO_URL" "$CLEANUP_DIR/repo" 2>/dev/null
+        cd "$CLEANUP_DIR/repo"
+    elif command_exists curl; then
+        curl -fsSL "https://github.com/DigitalCyberSoft/magic-trackpad-monitor/archive/refs/heads/master.tar.gz" \
+            | tar xz -C "$CLEANUP_DIR"
+        cd "$CLEANUP_DIR/magic-trackpad-monitor-master"
+    elif command_exists wget; then
+        wget -qO- "https://github.com/DigitalCyberSoft/magic-trackpad-monitor/archive/refs/heads/master.tar.gz" \
+            | tar xz -C "$CLEANUP_DIR"
+        cd "$CLEANUP_DIR/magic-trackpad-monitor-master"
+    else
+        log_error "git, curl, or wget is required to download source files"
+        exit 1
+    fi
+
+    log_success "Source files downloaded"
+}
+
+cleanup() {
+    if [ -n "$CLEANUP_DIR" ] && [ -d "$CLEANUP_DIR" ]; then
+        rm -rf "$CLEANUP_DIR"
+    fi
+}
+trap cleanup EXIT
+
 # Install dependencies
 install_dependencies() {
     log_info "Checking and installing dependencies..."
@@ -82,7 +119,7 @@ install_dependencies() {
     log_warning "Missing dependencies: ${missing_deps[*]}"
 
     # Ask user if they want to install dependencies
-    read -p "Install missing dependencies? [y/N] " -n 1 -r
+    read -p "Install missing dependencies? [y/N] " -n 1 -r < /dev/tty
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log_error "Dependencies required. Exiting."
@@ -183,14 +220,14 @@ setup_service() {
     systemctl --user daemon-reload
 
     # Ask if user wants to enable service
-    read -p "Enable service to start on login? [Y/n] " -n 1 -r
+    read -p "Enable service to start on login? [Y/n] " -n 1 -r < /dev/tty
     echo
     if [[ ! $REPLY =~ ^[Nn]$ ]]; then
         systemctl --user enable magic-trackpad-monitor.service
         log_success "Service enabled"
 
         # Ask if user wants to start service now
-        read -p "Start service now? [Y/n] " -n 1 -r
+        read -p "Start service now? [Y/n] " -n 1 -r < /dev/tty
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             systemctl --user start magic-trackpad-monitor.service
@@ -227,7 +264,7 @@ uninstall() {
     log_info "User data preserved in: ~/.config/trackpad-monitor/ and ~/.local/share/trackpad-monitor/"
 
     # Ask if user wants to remove user data
-    read -p "Remove user data (config and cache)? [y/N] " -n 1 -r
+    read -p "Remove user data (config and cache)? [y/N] " -n 1 -r < /dev/tty
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         rm -rf "$HOME/.config/trackpad-monitor"
@@ -270,6 +307,9 @@ main() {
 
     # Detect distribution
     detect_distro
+
+    # Download source files if running via curl | bash
+    ensure_source_files
 
     # Install dependencies
     install_dependencies

@@ -6,7 +6,7 @@ BINDIR ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share
 SERVICEDIR ?= $(HOME)/.config/systemd/user
 
-VERSION ?= 0.2.6
+VERSION ?= 0.2.9
 PACKAGE_NAME = magic-trackpad-monitor
 
 # Detect architecture
@@ -31,7 +31,7 @@ help:
 	@echo "Variables:"
 	@echo "  PREFIX     - Installation prefix (default: /usr/local)"
 	@echo "  BINDIR     - Binary installation directory (default: PREFIX/bin)"
-	@echo "  VERSION    - Package version (default: 0.1.0)"
+	@echo "  VERSION    - Package version (default: 0.2.9)"
 
 build: xidle
 	@echo "Build complete"

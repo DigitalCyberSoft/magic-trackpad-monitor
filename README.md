@@ -39,13 +39,15 @@ sudo dnf install magic-trackpad-monitor-*.rpm
 sudo apt install ./magic-trackpad-monitor_*.deb
 ```
 
-### Option 2: Bash Installer
+### Option 2: Quick Install (curl)
 ```bash
-# Clone repository
-git clone https://github.com/DigitalCyberSoft/magic-trackpad-monitor.git
-cd linux-magictrackpad-reconnect
+curl -fsSL https://raw.githubusercontent.com/DigitalCyberSoft/magic-trackpad-monitor/master/install.sh | bash
+```
 
-# Run installer (installs to ~/.local by default)
+Or from a cloned repository:
+```bash
+git clone https://github.com/DigitalCyberSoft/magic-trackpad-monitor.git
+cd magic-trackpad-monitor
 ./install.sh
 
 # Or install system-wide (requires sudo)
@@ -288,6 +290,10 @@ sudo apt remove magic-trackpad-monitor
 ```
 
 ### Via Bash Installer
+```bash
+curl -fsSL https://raw.githubusercontent.com/DigitalCyberSoft/magic-trackpad-monitor/master/install.sh | bash -s -- --uninstall
+```
+Or from a cloned repository:
 ```bash
 ./install.sh --uninstall
 ```

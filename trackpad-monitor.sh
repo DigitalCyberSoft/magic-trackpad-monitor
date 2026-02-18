@@ -19,6 +19,7 @@ CHECK_INTERVAL=10  # seconds between checks
 IDLE_THRESHOLD=600  # 10 minutes in seconds
 STUCK_THRESHOLD=30  # seconds without events to consider trackpad stuck
 CACHE_EXPIRY_DAYS=30  # Only track trackpads connected in last 30 days
+DISPLAY_SERVER=auto  # auto, x11, wayland, or fallback
 
 # Load configuration file if it exists
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -38,6 +39,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
             IDLE_THRESHOLD) IDLE_THRESHOLD="$value" ;;
             STUCK_THRESHOLD) STUCK_THRESHOLD="$value" ;;
             CACHE_EXPIRY_DAYS) CACHE_EXPIRY_DAYS="$value" ;;
+            DISPLAY_SERVER) DISPLAY_SERVER="$value" ;;
         esac
     done < <(grep -v '^[[:space:]]*$' "$CONFIG_FILE")
 else
@@ -75,30 +77,40 @@ log() {
 
 # Get idle time using cascading detection methods
 # Priority: GNOME D-Bus > KDE D-Bus > xidle (X11) > assume active
+# Respects DISPLAY_SERVER config: auto, x11, wayland, fallback
 get_idle_time() {
     local idle_ms
 
-    # 1. Try GNOME Mutter D-Bus (works on GNOME X11 + Wayland)
-    idle_ms=$(gdbus call --session \
-        --dest=org.gnome.Mutter.IdleMonitor \
-        --object-path /org/gnome/Mutter/IdleMonitor/Core \
-        --method org.gnome.Mutter.IdleMonitor.GetIdletime 2>/dev/null)
-    if [[ $? -eq 0 && -n "$idle_ms" ]]; then
-        # Extract number from "(uint64 12345,)"
-        idle_ms="${idle_ms//[^0-9]/}"
-        echo $((idle_ms / 1000))
+    # Fallback mode: always assume user is active
+    if [[ "$DISPLAY_SERVER" == "fallback" ]]; then
+        echo "0"
         return
     fi
 
-    # 2. Try KDE KIdleTime D-Bus (works on KDE X11 + Wayland)
-    idle_ms=$(qdbus org.kde.KIdleTime /KIdleTime idleTime 2>/dev/null)
-    if [[ $? -eq 0 && -n "$idle_ms" ]]; then
-        echo $((idle_ms / 1000))
-        return
+    # D-Bus methods (GNOME/KDE - works on both X11 and Wayland)
+    if [[ "$DISPLAY_SERVER" != "x11" ]]; then
+        # 1. Try GNOME Mutter D-Bus (works on GNOME X11 + Wayland)
+        idle_ms=$(gdbus call --session \
+            --dest=org.gnome.Mutter.IdleMonitor \
+            --object-path /org/gnome/Mutter/IdleMonitor/Core \
+            --method org.gnome.Mutter.IdleMonitor.GetIdletime 2>/dev/null)
+        if [[ $? -eq 0 && -n "$idle_ms" ]]; then
+            # Extract number from "(uint64 12345,)"
+            idle_ms="${idle_ms//[^0-9]/}"
+            echo $((idle_ms / 1000))
+            return
+        fi
+
+        # 2. Try KDE KIdleTime D-Bus (works on KDE X11 + Wayland)
+        idle_ms=$(qdbus org.kde.KIdleTime /KIdleTime idleTime 2>/dev/null)
+        if [[ $? -eq 0 && -n "$idle_ms" ]]; then
+            echo $((idle_ms / 1000))
+            return
+        fi
     fi
 
     # 3. Try xidle for X11 (works on Cinnamon, XFCE, i3, etc.)
-    if [[ -n "$DISPLAY" ]]; then
+    if [[ "$DISPLAY_SERVER" != "wayland" && -n "$DISPLAY" ]]; then
         local xidle_cmd=""
         for path in "$HOME/.local/bin/xidle" "/usr/local/bin/xidle" "/usr/bin/xidle"; do
             if [[ -x "$path" ]]; then
@@ -179,23 +191,46 @@ is_trackpad_connected() {
     return 1
 }
 
+# Track when stuck condition was first detected
+STUCK_SINCE=0
+
 is_trackpad_stuck() {
+    local now
+    now=$(date +%s)
+
+    local stuck=false
+
     # Check if device is present at all
     if ! is_trackpad_present; then
-        return 0  # Not present = stuck
+        stuck=true
     fi
 
     # On X11, also check if device is enabled via xinput
-    if [[ -n "$DISPLAY" ]]; then
+    if [[ "$stuck" == "false" && -n "$DISPLAY" ]]; then
         local trackpad_id=$(xinput list 2>/dev/null | grep "Magic Trackpad" | grep -oP 'id=\K\d+' | head -1)
         if [[ -n "$trackpad_id" ]]; then
             if xinput list-props "$trackpad_id" 2>/dev/null | grep "Device Enabled" | grep -qE '\b0\s*$'; then
-                return 0  # Disabled = stuck
+                stuck=true
             fi
         fi
     fi
 
-    return 1  # Appears to be working
+    if [[ "$stuck" == "true" ]]; then
+        if [[ $STUCK_SINCE -eq 0 ]]; then
+            STUCK_SINCE=$now
+            log "Trackpad may be stuck, waiting ${STUCK_THRESHOLD}s before recovery..."
+        fi
+        local stuck_duration=$((now - STUCK_SINCE))
+        if [[ $stuck_duration -ge $STUCK_THRESHOLD ]]; then
+            STUCK_SINCE=0
+            return 0  # Stuck for long enough, trigger recovery
+        fi
+        return 1  # Not stuck long enough yet
+    fi
+
+    # Device appears working, reset stuck timer
+    STUCK_SINCE=0
+    return 1  # Not stuck
 }
 
 reset_bluetooth() {
@@ -217,7 +252,7 @@ reset_bluetooth() {
 connect_trackpad() {
     log "Attempting to connect to Magic Trackpad ($TRACKPAD_MAC)..."
     local output
-    output=$(bluetoothctl connect "$TRACKPAD_MAC" 2>&1)
+    output=$(timeout 15 bluetoothctl connect "$TRACKPAD_MAC" 2>&1)
 
     if echo "$output" | grep -qi "Connection successful\|already connected"; then
         local timestamp=$(date '+%Y-%m-%d %H:%M:%S (%s)')
@@ -232,7 +267,7 @@ connect_trackpad() {
 
 reconnect_trackpad() {
     log "Disconnecting trackpad before reconnect..."
-    bluetoothctl disconnect "$TRACKPAD_MAC" &>/dev/null
+    timeout 5 bluetoothctl disconnect "$TRACKPAD_MAC" &>/dev/null
     sleep 1
 
     if connect_trackpad; then
@@ -246,7 +281,7 @@ reconnect_trackpad() {
 }
 
 log "Starting Magic Trackpad monitor..."
-log "Idle threshold: ${IDLE_THRESHOLD}s (${IDLE_THRESHOLD}/60 minutes)"
+log "Idle threshold: ${IDLE_THRESHOLD}s ($((IDLE_THRESHOLD / 60)) minutes)"
 log "Check interval: ${CHECK_INTERVAL}s"
 
 # Show last connected time if available
