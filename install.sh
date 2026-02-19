@@ -6,7 +6,7 @@
 set -e
 
 PACKAGE_NAME="magic-trackpad-monitor"
-VERSION="0.2.9"
+VERSION="0.3.0"
 INSTALL_PREFIX="${PREFIX:-$HOME/.local}"
 REPO_URL="https://github.com/DigitalCyberSoft/magic-trackpad-monitor.git"
 CLEANUP_DIR=""

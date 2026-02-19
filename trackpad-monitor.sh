@@ -171,6 +171,28 @@ find_trackpad_mac() {
     return 1
 }
 
+# Wait for Bluetooth controller to become available
+wait_for_bluetooth() {
+    local max_wait=60
+    local waited=0
+    log "Waiting for Bluetooth controller..."
+    while ! bluetoothctl show &>/dev/null; do
+        if [[ $waited -ge $max_wait ]]; then
+            log "ERROR: Bluetooth controller not available after ${max_wait}s"
+            return 1
+        fi
+        sleep 2
+        waited=$((waited + 2))
+    done
+    log "Bluetooth controller ready (waited ${waited}s)"
+    return 0
+}
+
+# Wait for Bluetooth before proceeding
+if ! wait_for_bluetooth; then
+    exit 1
+fi
+
 # Get the trackpad MAC address
 TRACKPAD_MAC=$(find_trackpad_mac)
 
